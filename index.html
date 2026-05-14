@@ -3,79 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MiniCraft Command Trainer</title>
+  <title>AthlonCraft 1.21 Lite</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">MiniCraft Command Trainer</p>
-        <h1>Aprenda survival, creative e comandos jogando</h1>
+    <section id="menu" class="menu">
+      <div class="menu-card">
+        <p class="eyebrow">AthlonCraft 1.21 Lite</p>
+        <h1>Minecraft-like ultra otimizado</h1>
+        <p>Inspirado no survival moderno, feito para Athlon X2, Core 2 Duo, 4GB RAM e GPUs antigas.</p>
+        <div id="hardware" class="hardware"></div>
+        <div class="menu-actions">
+          <button id="play">Jogar</button>
+          <button id="toggleMode">Modo ultra leve: ON</button>
+        </div>
       </div>
-      <div class="hud">
-        <span>Modo <b id="modeLabel">survival</b></span>
-        <span>Vida <b id="healthLabel">20</b></span>
-        <span>Fome <b id="hungerLabel">20</b></span>
-        <span>XP <b id="xpLabel">0</b></span>
-        <span>Dia <b id="dayLabel">1</b></span>
-      </div>
-    </header>
-
-    <section class="layout">
-      <aside class="panel missions">
-        <div class="tabs">
-          <button class="tab active" data-tab="survival">Survival</button>
-          <button class="tab" data-tab="creative">Creative</button>
-          <button class="tab" data-tab="commands">Comandos</button>
-        </div>
-        <h2 id="lessonTitle">Primeiros passos</h2>
-        <p id="lessonText"></p>
-        <div class="goal" id="goalText"></div>
-        <ul id="taskList" class="tasks"></ul>
-      </aside>
-
-      <section class="play-area">
-        <div id="world" class="world" aria-label="Mundo do jogo"></div>
-        <div class="controls">
-          <button data-move="up">W</button>
-          <div>
-            <button data-move="left">A</button>
-            <button data-action="mine">Quebrar</button>
-            <button data-move="right">D</button>
-          </div>
-          <button data-move="down">S</button>
-        </div>
-        <div id="log" class="log">Use WASD, clique nos botoes ou digite comandos.</div>
-      </section>
-
-      <aside class="panel side">
-        <h2>Inventario</h2>
-        <div id="inventory" class="inventory"></div>
-        <h2>Construir</h2>
-        <div class="build-buttons">
-          <button data-build="planks">Tabuas</button>
-          <button data-build="stone">Pedra</button>
-          <button data-build="torch">Tocha</button>
-          <button data-build="crafting_table">Mesa</button>
-        </div>
-        <h2>Livro de comandos</h2>
-        <input id="commandSearch" class="search" placeholder="Buscar comando: tp, give, gamerule...">
-        <div id="commandBook" class="book"></div>
-      </aside>
     </section>
 
-    <section class="console">
-      <span>&gt;</span>
-      <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="/gamemode creative">
-      <button id="runCommand">Executar</button>
-    </section>
+    <section id="game" class="game hidden">
+      <header class="topbar">
+        <div>
+          <b>AthlonCraft 1.21 Lite</b>
+          <span id="profileLabel">Ultra leve</span>
+        </div>
+        <div class="hud">
+          <span>FPS <b id="fps">0</b></span>
+          <span>Chunks <b id="chunks">0</b></span>
+          <span>Culling <b id="culled">0</b></span>
+          <span>Vida <b id="hp">20</b></span>
+          <span>Fome <b id="hunger">20</b></span>
+        </div>
+      </header>
 
-    <footer class="footer">
-      <label><input id="lowMode" type="checkbox" checked> Modo leve para 4GB RAM / Athlon X2</label>
-      <span>Teclas: WASD move, Espaço quebra, 1-4 constroi, Enter executa comando.</span>
-    </footer>
+      <canvas id="canvas" width="960" height="540" aria-label="Jogo AthlonCraft"></canvas>
+
+      <footer class="bar">
+        <div class="keys">WASD move | Clique/espaco minera | 1 pedra | 2 madeira | 3 tocha | M menu</div>
+        <div id="status">Chunks sob demanda, culling agressivo e renderizacao simples.</div>
+      </footer>
+    </section>
   </main>
+
   <script src="app.js"></script>
 </body>
 </html>
