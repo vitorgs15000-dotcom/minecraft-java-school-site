@@ -11,20 +11,32 @@
     <section id="menu" class="menu">
       <div class="menu-card">
         <p class="eyebrow">AthlonCraft 1.21 Lite</p>
-        <h1>Minecraft-like ultra otimizado</h1>
-        <p>Inspirado no survival moderno, feito para Athlon X2, Core 2 Duo, 4GB RAM e GPUs antigas.</p>
+        <h1>AthlonCraft Java 26.1.2 Lite</h1>
+        <p>Inspirado no Minecraft Java atual, feito para Athlon X2, Core 2 Duo, 4GB RAM e GPUs antigas. Nao usa codigo nem assets oficiais da Mojang.</p>
         <div id="hardware" class="hardware"></div>
+        <div class="settings">
+          <h2>Configuracao de desempenho</h2>
+          <label>FPS limite <input id="fpsLimit" type="range" min="20" max="60" step="5" value="30"><b id="fpsLimitValue">30</b></label>
+          <label>Chunks <input id="renderChunks" type="range" min="2" max="8" step="1" value="3"><b id="renderChunksValue">3</b></label>
+          <label>Entidades <input id="entityLimit" type="range" min="4" max="64" step="4" value="16"><b id="entityLimitValue">16</b></label>
+          <label><input id="particles" type="checkbox"> Particulas leves</label>
+          <label><input id="lighting" type="checkbox"> Iluminacao suave</label>
+          <label><input id="mobAi" type="checkbox" checked> IA de mobs economica</label>
+        </div>
         <div class="menu-actions">
           <button id="play">Jogar</button>
           <button id="toggleMode">Modo ultra leve: ON</button>
+          <button id="athlonPreset">Preset Athlon X2</button>
+          <button id="exportConfig">Exportar config</button>
         </div>
+        <pre id="configOutput" class="config-output"></pre>
       </div>
     </section>
 
     <section id="game" class="game hidden">
       <header class="topbar">
         <div>
-          <b>AthlonCraft 1.21 Lite</b>
+          <b>AthlonCraft Java 26.1.2 Lite</b>
           <span id="profileLabel">Ultra leve</span>
         </div>
         <div class="hud">
