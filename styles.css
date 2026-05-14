@@ -67,6 +67,50 @@ p, .hardware, #status, .keys {
   border: 1px solid var(--line);
 }
 
+.settings {
+  margin: 16px 0;
+  padding: 14px;
+  background: #0a1016;
+  border: 1px solid var(--line);
+}
+
+.settings h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.settings label {
+  display: grid;
+  grid-template-columns: 140px 1fr 38px;
+  align-items: center;
+  gap: 10px;
+  margin: 9px 0;
+  color: var(--muted);
+}
+
+.settings label:has(input[type="checkbox"]) {
+  display: block;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.config-output {
+  display: none;
+  max-height: 170px;
+  overflow: auto;
+  padding: 12px;
+  background: #05080b;
+  border: 1px solid var(--line);
+  color: #d8fff0;
+  white-space: pre-wrap;
+}
+
+.config-output.active {
+  display: block;
+}
+
 .menu-actions {
   display: flex;
   gap: 10px;
