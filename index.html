@@ -3,57 +3,79 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Minecraft Command Quest</title>
+  <title>MiniCraft Command Trainer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="game-shell">
-    <section class="topbar">
+  <main class="shell">
+    <header class="topbar">
       <div>
-        <p class="eyebrow">Minecraft Java Command Quest</p>
-        <h1>Aprenda comandos jogando</h1>
+        <p class="eyebrow">MiniCraft Command Trainer</p>
+        <h1>Aprenda survival, creative e comandos jogando</h1>
       </div>
       <div class="hud">
-        <span>Fase <b id="levelNumber">1</b></span>
-        <span>XP <b id="xp">0</b></span>
-        <span>FPS <b id="fps">--</b></span>
+        <span>Modo <b id="modeLabel">survival</b></span>
+        <span>Vida <b id="healthLabel">20</b></span>
+        <span>Fome <b id="hungerLabel">20</b></span>
+        <span>XP <b id="xpLabel">0</b></span>
+        <span>Dia <b id="dayLabel">1</b></span>
       </div>
-    </section>
+    </header>
 
-    <section class="stage">
-      <aside class="mission">
-        <h2 id="missionTitle">Missao</h2>
-        <p id="missionText"></p>
-        <div class="objective" id="objectiveText"></div>
-        <div class="tips">
-          <b>Dicas</b>
-          <ul id="tips"></ul>
+    <section class="layout">
+      <aside class="panel missions">
+        <div class="tabs">
+          <button class="tab active" data-tab="survival">Survival</button>
+          <button class="tab" data-tab="creative">Creative</button>
+          <button class="tab" data-tab="commands">Comandos</button>
         </div>
+        <h2 id="lessonTitle">Primeiros passos</h2>
+        <p id="lessonText"></p>
+        <div class="goal" id="goalText"></div>
+        <ul id="taskList" class="tasks"></ul>
       </aside>
 
-      <div class="world-panel">
+      <section class="play-area">
         <div id="world" class="world" aria-label="Mundo do jogo"></div>
-        <div id="toast" class="toast">Digite um comando para jogar.</div>
-      </div>
+        <div class="controls">
+          <button data-move="up">W</button>
+          <div>
+            <button data-move="left">A</button>
+            <button data-action="mine">Quebrar</button>
+            <button data-move="right">D</button>
+          </div>
+          <button data-move="down">S</button>
+        </div>
+        <div id="log" class="log">Use WASD, clique nos botoes ou digite comandos.</div>
+      </section>
 
-      <aside class="book">
+      <aside class="panel side">
+        <h2>Inventario</h2>
+        <div id="inventory" class="inventory"></div>
+        <h2>Construir</h2>
+        <div class="build-buttons">
+          <button data-build="planks">Tabuas</button>
+          <button data-build="stone">Pedra</button>
+          <button data-build="torch">Tocha</button>
+          <button data-build="crafting_table">Mesa</button>
+        </div>
         <h2>Livro de comandos</h2>
-        <div id="commandBook"></div>
+        <input id="commandSearch" class="search" placeholder="Buscar comando: tp, give, gamerule...">
+        <div id="commandBook" class="book"></div>
       </aside>
     </section>
 
     <section class="console">
-      <span class="prompt">&gt;</span>
-      <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="/give @p minecraft:torch 8">
+      <span>&gt;</span>
+      <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="/gamemode creative">
       <button id="runCommand">Executar</button>
     </section>
 
-    <section class="low-spec">
-      <label><input id="lowMode" type="checkbox" checked> Modo Athlon X2 / 4GB RAM</label>
-      <span>Sem canvas pesado, sem 3D, sem download. Roda direto no navegador.</span>
-    </section>
+    <footer class="footer">
+      <label><input id="lowMode" type="checkbox" checked> Modo leve para 4GB RAM / Athlon X2</label>
+      <span>Teclas: WASD move, Espaço quebra, 1-4 constroi, Enter executa comando.</span>
+    </footer>
   </main>
-
   <script src="app.js"></script>
 </body>
 </html>
