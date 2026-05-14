@@ -3,103 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Escola Minecraft Java - Comandos e Otimizacao</title>
+  <title>Minecraft Command Quest</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="brand-mark">MC</span>
+  <main class="game-shell">
+    <section class="topbar">
       <div>
-        <strong>Java School</strong>
-        <small>Comandos + FPS</small>
+        <p class="eyebrow">Minecraft Java Command Quest</p>
+        <h1>Aprenda comandos jogando</h1>
       </div>
-    </div>
-    <button class="nav active" data-view="commands">Comandos</button>
-    <button class="nav" data-view="learn">Aprender</button>
-    <button class="nav" data-view="optimize">PC fraco</button>
-    <button class="nav" data-view="cheatsheet">Cola rapida</button>
-    <button class="nav" data-view="favorites">Favoritos</button>
-    <label class="eco-toggle">
-      <input id="ecoMode" type="checkbox">
-      <span>Modo leve</span>
-    </label>
-  </aside>
-
-  <main class="app">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Minecraft Java atual</p>
-        <h1>Aprenda comandos, sobrevivencia e otimizacao para 4GB RAM</h1>
-        <p>Feito para PC simples: Athlon X2, Core 2 Duo e notebooks antigos. Tudo offline, sem Electron, sem login, sem servidor.</p>
-      </div>
-      <div class="stats">
-        <span><b id="totalCommands">0</b> comandos</span>
-        <span><b>1.20+</b> moderno</span>
-        <span><b>4GB</b> perfil leve</span>
+      <div class="hud">
+        <span>Fase <b id="levelNumber">1</b></span>
+        <span>XP <b id="xp">0</b></span>
+        <span>FPS <b id="fps">--</b></span>
       </div>
     </section>
 
-    <section id="commands" class="view active-view">
-      <div class="toolbar">
-        <input id="search" type="search" placeholder="Buscar: tp, give, gamerule, tempo, mobs...">
-        <select id="categoryFilter" aria-label="Categoria"></select>
-      </div>
-      <div id="commandList" class="grid"></div>
-    </section>
-
-    <section id="learn" class="view">
-      <div class="panel">
-        <h2>Roteiro para aprender Minecraft Java</h2>
-        <ol class="steps">
-          <li><b>Primeiro mundo:</b> madeira, mesa de trabalho, ferramentas de pedra, cama e comida.</li>
-          <li><b>Seguranca:</b> ilumine base, use escudo, evite minerar reto para baixo.</li>
-          <li><b>Coordenadas:</b> ative F3 e anote X/Y/Z da base. Use Y baixo para minerar.</li>
-          <li><b>Comandos basicos:</b> pratique /gamemode, /tp, /give, /time e /weather em mundo de teste.</li>
-          <li><b>Redstone leve:</b> comece com alavanca, repetidor, piston, funil e bau.</li>
-          <li><b>Servidor/LAN:</b> aprenda /op, /whitelist, /ban, /kick e /gamerule.</li>
-        </ol>
-      </div>
-      <div class="panel">
-        <h2>Exemplos seguros para treinar</h2>
-        <div class="examples" id="safeExamples"></div>
-      </div>
-    </section>
-
-    <section id="optimize" class="view">
-      <div class="panel">
-        <h2>Perfil recomendado: 4GB RAM + Athlon X2</h2>
-        <div class="settings-grid">
-          <div><b>Versao</b><span>Prefira 1.20.1 com Fabric + Sodium, ou 1.16.5 se o PC sofrer.</span></div>
-          <div><b>RAM no launcher</b><span>1024 MB a 1536 MB. Nao coloque 3GB em PC com 4GB.</span></div>
-          <div><b>Resolucao</b><span>854x480 ou 1280x720 em tela cheia.</span></div>
-          <div><b>Render Distance</b><span>4 a 6 chunks.</span></div>
-          <div><b>Simulation Distance</b><span>4 chunks.</span></div>
-          <div><b>Graficos</b><span>Fast, Smooth Lighting Off/Minimum, Clouds Off, Particles Minimal.</span></div>
-          <div><b>Mods leves</b><span>Sodium, Lithium, FerriteCore, ImmediatelyFast, EntityCulling.</span></div>
-          <div><b>Evite</b><span>Shaders, resource packs 64x+, muitos mobs, farms gigantes e launchers pesados.</span></div>
+    <section class="stage">
+      <aside class="mission">
+        <h2 id="missionTitle">Missao</h2>
+        <p id="missionText"></p>
+        <div class="objective" id="objectiveText"></div>
+        <div class="tips">
+          <b>Dicas</b>
+          <ul id="tips"></ul>
         </div>
+      </aside>
+
+      <div class="world-panel">
+        <div id="world" class="world" aria-label="Mundo do jogo"></div>
+        <div id="toast" class="toast">Digite um comando para jogar.</div>
       </div>
-      <div class="panel">
-        <h2>JVM simples</h2>
-        <code class="code-block">-Xms512M -Xmx1536M -XX:+UseG1GC</code>
-        <p class="muted">Para Athlon X2, menos RAM alocada costuma ser melhor que deixar o Windows sem memoria.</p>
-      </div>
+
+      <aside class="book">
+        <h2>Livro de comandos</h2>
+        <div id="commandBook"></div>
+      </aside>
     </section>
 
-    <section id="cheatsheet" class="view">
-      <div class="panel">
-        <h2>Cola rapida</h2>
-        <div id="cheatSheet" class="cheat-list"></div>
-      </div>
+    <section class="console">
+      <span class="prompt">&gt;</span>
+      <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="/give @p minecraft:torch 8">
+      <button id="runCommand">Executar</button>
     </section>
 
-    <section id="favorites" class="view">
-      <div class="panel">
-        <h2>Favoritos</h2>
-        <p class="muted">Clique na estrela de qualquer comando para guardar aqui.</p>
-        <div id="favoriteList" class="grid"></div>
-      </div>
+    <section class="low-spec">
+      <label><input id="lowMode" type="checkbox" checked> Modo Athlon X2 / 4GB RAM</label>
+      <span>Sem canvas pesado, sem 3D, sem download. Roda direto no navegador.</span>
     </section>
   </main>
 
