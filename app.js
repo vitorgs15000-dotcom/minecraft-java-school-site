@@ -1,196 +1,237 @@
-const commands = [
-  ["advancement", "Jogador", "/advancement grant <jogador> only <avanco>", "Concede, remove ou testa avancos.", "OP"],
-  ["attribute", "Entidades", "/attribute <alvo> <atributo> base set <valor>", "Consulta ou altera atributos como vida, dano e velocidade.", "OP"],
-  ["ban", "Servidor", "/ban <jogador> [motivo]", "Bane um jogador pelo nome.", "Servidor"],
-  ["ban-ip", "Servidor", "/ban-ip <ip|jogador> [motivo]", "Bane um endereco IP.", "Servidor"],
-  ["banlist", "Servidor", "/banlist players", "Mostra banimentos de jogadores ou IPs.", "Servidor"],
-  ["bossbar", "Interface", "/bossbar add minecraft:vida \"Boss\"", "Cria e controla barras de boss personalizadas.", "OP"],
-  ["clear", "Inventario", "/clear <jogador> <item> <quantidade>", "Remove itens do inventario.", "OP"],
-  ["clone", "Mundo", "/clone x1 y1 z1 x2 y2 z2 x y z", "Copia uma area para outro lugar.", "OP"],
-  ["damage", "Entidades", "/damage <alvo> <quantidade>", "Causa dano por comando.", "1.19.4+"],
-  ["data", "NBT", "/data get entity <alvo>", "Le ou altera dados de entidades, blocos e armazenamento.", "Avancado"],
-  ["datapack", "Mundo", "/datapack list", "Ativa, desativa e lista datapacks.", "OP"],
-  ["debug", "Desempenho", "/debug start", "Gera diagnostico de desempenho.", "OP"],
-  ["defaultgamemode", "Jogador", "/defaultgamemode survival", "Define o modo padrao para novos jogadores.", "OP"],
-  ["deop", "Servidor", "/deop <jogador>", "Remove permissao de operador.", "Servidor"],
-  ["difficulty", "Mundo", "/difficulty peaceful", "Muda dificuldade do mundo.", "OP"],
-  ["effect", "Entidades", "/effect give @p minecraft:speed 60 1", "Aplica ou remove efeitos.", "OP"],
-  ["enchant", "Inventario", "/enchant @p minecraft:sharpness 5", "Encanta o item segurado.", "OP"],
-  ["execute", "Avancado", "/execute as @e[type=zombie] at @s run say oi", "Executa comandos com contexto, posicao e condicoes.", "Avancado"],
-  ["experience", "Jogador", "/experience add @p 10 levels", "Adiciona, remove ou consulta XP. Tambem aceita /xp.", "OP"],
-  ["fill", "Mundo", "/fill x1 y1 z1 x2 y2 z2 minecraft:stone", "Preenche uma area com blocos.", "OP"],
-  ["fillbiome", "Mundo", "/fillbiome x1 y1 z1 x2 y2 z2 minecraft:plains", "Troca bioma de uma area.", "1.19.3+"],
-  ["forceload", "Mundo", "/forceload add x z", "Mantem chunks carregados.", "OP"],
-  ["function", "Datapack", "/function namespace:nome", "Executa uma funcao de datapack.", "Avancado"],
-  ["gamemode", "Jogador", "/gamemode creative @p", "Muda modo de jogo.", "OP"],
-  ["gamerule", "Mundo", "/gamerule keepInventory true", "Altera regras do mundo.", "OP"],
-  ["give", "Inventario", "/give @p minecraft:diamond 64", "Entrega itens.", "OP"],
-  ["help", "Basico", "/help give", "Mostra ajuda dos comandos.", "Livre"],
-  ["item", "Inventario", "/item replace entity @p weapon.mainhand with minecraft:diamond_sword", "Edita itens em slots.", "OP"],
-  ["jfr", "Desempenho", "/jfr start", "Ferramenta de profiling Java Flight Recorder.", "Servidor"],
-  ["kick", "Servidor", "/kick <jogador> [motivo]", "Expulsa jogador do servidor.", "Servidor"],
-  ["kill", "Entidades", "/kill @e[type=minecraft:zombie]", "Remove entidades ou mata jogador.", "OP"],
-  ["list", "Servidor", "/list", "Lista jogadores online.", "Livre"],
-  ["locate", "Exploracao", "/locate structure minecraft:village", "Encontra estruturas, biomas ou pontos de interesse.", "OP"],
-  ["loot", "Inventario", "/loot give @p loot minecraft:chests/simple_dungeon", "Gera loot de tabelas.", "OP"],
-  ["me", "Chat", "/me encontrou diamantes", "Envia acao no chat.", "Livre"],
-  ["msg", "Chat", "/msg <jogador> ola", "Mensagem privada. Tambem /tell e /w.", "Livre"],
-  ["op", "Servidor", "/op <jogador>", "Da permissao de operador.", "Servidor"],
-  ["pardon", "Servidor", "/pardon <jogador>", "Remove banimento de jogador.", "Servidor"],
-  ["pardon-ip", "Servidor", "/pardon-ip <ip>", "Remove banimento de IP.", "Servidor"],
-  ["particle", "Visual", "/particle minecraft:flame ~ ~1 ~ 0.3 0.3 0.3 0 20", "Cria particulas.", "OP"],
-  ["perf", "Desempenho", "/perf start", "Coleta metricas de performance do servidor.", "Servidor"],
-  ["place", "Mundo", "/place feature minecraft:oak", "Coloca features, estruturas ou jigsaws.", "OP"],
-  ["playsound", "Audio", "/playsound minecraft:block.note_block.pling master @p", "Toca sons para jogadores.", "OP"],
-  ["publish", "Servidor", "/publish", "Abre mundo singleplayer para LAN.", "Dono"],
-  ["random", "Avancado", "/random roll 1..100", "Gera valores aleatorios.", "1.20.2+"],
-  ["recipe", "Jogador", "/recipe give @p *", "Libera ou remove receitas.", "OP"],
-  ["reload", "Datapack", "/reload", "Recarrega datapacks.", "OP"],
-  ["return", "Datapack", "/return 1", "Retorna valor em funcoes.", "Avancado"],
-  ["ride", "Entidades", "/ride @p mount @e[type=horse,limit=1]", "Controla montaria entre entidades.", "OP"],
-  ["save-all", "Servidor", "/save-all flush", "Salva o mundo do servidor.", "Servidor"],
-  ["save-off", "Servidor", "/save-off", "Desliga salvamento automatico.", "Servidor"],
-  ["save-on", "Servidor", "/save-on", "Liga salvamento automatico.", "Servidor"],
-  ["say", "Chat", "/say servidor reiniciando", "Envia mensagem como servidor.", "OP"],
-  ["schedule", "Datapack", "/schedule function pack:tick 10s", "Agenda funcao para depois.", "Avancado"],
-  ["scoreboard", "Avancado", "/scoreboard objectives add pontos dummy", "Cria placares, variaveis e contadores.", "Avancado"],
-  ["seed", "Mundo", "/seed", "Mostra seed do mundo.", "Permissao"],
-  ["setblock", "Mundo", "/setblock ~ ~ ~ minecraft:diamond_block", "Coloca um bloco em uma coordenada.", "OP"],
-  ["setidletimeout", "Servidor", "/setidletimeout 10", "Expulsa inativos apos minutos.", "Servidor"],
-  ["setworldspawn", "Mundo", "/setworldspawn ~ ~ ~", "Define spawn global.", "OP"],
-  ["spawnpoint", "Jogador", "/spawnpoint @p ~ ~ ~", "Define spawn de jogador.", "OP"],
-  ["spectate", "Jogador", "/spectate <alvo> <jogador>", "Faz jogador espectar entidade.", "OP"],
-  ["spreadplayers", "Jogador", "/spreadplayers 0 0 20 80 false @a", "Espalha jogadores/entidades.", "OP"],
-  ["stop", "Servidor", "/stop", "Desliga o servidor.", "Servidor"],
-  ["stopsound", "Audio", "/stopsound @a", "Para sons.", "OP"],
-  ["summon", "Entidades", "/summon minecraft:zombie ~ ~ ~", "Invoca entidades.", "OP"],
-  ["tag", "Entidades", "/tag @p add builder", "Adiciona tags em entidades.", "OP"],
-  ["team", "Servidor", "/team add azul", "Cria e gerencia times.", "OP"],
-  ["teammsg", "Chat", "/teammsg vamos", "Mensagem para time. Tambem /tm.", "Time"],
-  ["teleport", "Jogador", "/tp @p 0 80 0", "Teleporta jogadores ou entidades. Tambem /tp.", "OP"],
-  ["tellraw", "Chat", "/tellraw @a {\"text\":\"Ola\",\"color\":\"aqua\"}", "Mensagem JSON personalizada.", "Avancado"],
-  ["tick", "Desempenho", "/tick rate 20", "Controla velocidade de ticks em mundos com permissao.", "1.20.3+"],
-  ["time", "Mundo", "/time set day", "Controla horario.", "OP"],
-  ["title", "Interface", "/title @a title {\"text\":\"Bem-vindo\"}", "Mostra titulo/subtitulo/actionbar.", "OP"],
-  ["transfer", "Servidor", "/transfer <host> [porta] [jogadores]", "Move jogadores para outro servidor.", "1.20.5+"],
-  ["trigger", "Jogador", "/trigger home", "Ativa objetivos permitidos no scoreboard.", "Datapack"],
-  ["weather", "Mundo", "/weather clear", "Muda clima.", "OP"],
-  ["whitelist", "Servidor", "/whitelist add <jogador>", "Controla lista de entrada no servidor.", "Servidor"],
-  ["worldborder", "Mundo", "/worldborder set 1000", "Controla borda do mundo.", "OP"]
-].map(([name, category, syntax, description, tag]) => ({ name, category, syntax, description, tag }));
+const width = 12;
+const height = 8;
+const world = document.getElementById("world");
+const input = document.getElementById("commandInput");
+const toast = document.getElementById("toast");
+const levelNumber = document.getElementById("levelNumber");
+const xpEl = document.getElementById("xp");
+const fpsEl = document.getElementById("fps");
+const commandBook = document.getElementById("commandBook");
+const lowMode = document.getElementById("lowMode");
 
-const examples = [
-  "/gamemode creative @p",
-  "/gamerule keepInventory true",
-  "/time set day",
-  "/weather clear",
-  "/give @p minecraft:torch 64",
-  "/tp @p 0 80 0",
-  "/difficulty easy",
-  "/spawnpoint @p ~ ~ ~"
+let xp = 0;
+let levelIndex = 0;
+let player = { x: 1, y: 5, mode: "survival", inventory: {} };
+let state = {};
+
+const commandHelp = [
+  ["Teleporte", "/tp @p 8 5", "Move o jogador para uma coordenada."],
+  ["Dar item", "/give @p minecraft:torch 8", "Coloca itens no inventario."],
+  ["Modo de jogo", "/gamemode creative", "Troca para creative, survival, adventure ou spectator."],
+  ["Tempo", "/time set day", "Muda o horario do mundo."],
+  ["Clima", "/weather clear", "Remove chuva e tempestade."],
+  ["Regra", "/gamerule keepInventory true", "Altera regras do mundo."],
+  ["Invocar", "/summon minecraft:cow 6 4", "Cria entidades em uma posicao."],
+  ["Bloco", "/setblock 5 5 minecraft:stone", "Coloca bloco em uma coordenada."],
+  ["Efeito", "/effect give @p minecraft:speed", "Aplica um efeito simples."],
+  ["Limpar", "/kill @e[type=minecraft:zombie]", "Remove entidades perigosas."]
 ];
 
-const $ = (id) => document.getElementById(id);
-let favorites = JSON.parse(localStorage.getItem("mcFavorites") || "[]");
+const levels = [
+  {
+    title: "Noite perigosa",
+    text: "Voce nasceu num mundo escuro. Use um comando para virar dia.",
+    objective: "Objetivo: deixe o tempo como dia.",
+    tips: ["/time set day"],
+    setup: () => ({ time: "night", weather: "clear", zombies: [[8, 5]], base: [10, 5], lit: [] }),
+    check: () => state.time === "day"
+  },
+  {
+    title: "Base sem luz",
+    text: "A base esta escura. Pegue tochas com /give e ilumine perto da casa.",
+    objective: "Objetivo: tenha tochas e coloque luz na base.",
+    tips: ["/give @p minecraft:torch 8", "/setblock 10 5 minecraft:torch"],
+    setup: () => ({ time: "night", weather: "clear", zombies: [[7, 4]], base: [10, 5], lit: [] }),
+    check: () => (player.inventory.torch || 0) > 0 && state.lit.some(([x, y]) => x === 10 && y === 5)
+  },
+  {
+    title: "Fuga rapida",
+    text: "Um zumbi bloqueia o caminho. Use teleporte para chegar perto da base.",
+    objective: "Objetivo: chegue na coordenada X 10, Y 5.",
+    tips: ["/tp @p 10 5"],
+    setup: () => ({ time: "night", weather: "rain", zombies: [[5, 5], [6, 5]], base: [10, 5], lit: [[10, 5]] }),
+    check: () => player.x === 10 && player.y === 5
+  },
+  {
+    title: "Construtor criativo",
+    text: "Aprenda a trocar modo de jogo e colocar blocos.",
+    objective: "Objetivo: entre no creative e coloque pedra em X 6, Y 4.",
+    tips: ["/gamemode creative", "/setblock 6 4 minecraft:stone"],
+    setup: () => ({ time: "day", weather: "clear", zombies: [], base: [10, 5], lit: [[10, 5]], blocks: {} }),
+    check: () => player.mode === "creative" && state.blocks["6,4"] === "stone"
+  },
+  {
+    title: "Chuva e sobrevivencia",
+    text: "A chuva atrapalha seu PC antigo e a visibilidade. Limpe o clima.",
+    objective: "Objetivo: clima limpo e keepInventory ativado.",
+    tips: ["/weather clear", "/gamerule keepInventory true"],
+    setup: () => ({ time: "day", weather: "thunder", keepInventory: false, zombies: [[9, 3]], base: [10, 5], lit: [[10, 5]] }),
+    check: () => state.weather === "clear" && state.keepInventory === true
+  },
+  {
+    title: "Administrador do mundo",
+    text: "Finalize limpando os zumbis e invocando uma vaca perto da base.",
+    objective: "Objetivo: sem zumbis e com uma vaca no mapa.",
+    tips: ["/kill @e[type=minecraft:zombie]", "/summon minecraft:cow 9 5"],
+    setup: () => ({ time: "day", weather: "clear", zombies: [[4, 4], [5, 4], [6, 4]], cows: [], base: [10, 5], lit: [[10, 5]] }),
+    check: () => state.zombies.length === 0 && state.cows.length > 0
+  }
+];
 
-function init() {
-  $("totalCommands").textContent = commands.length;
-  buildCategories();
-  renderCommands();
-  renderExamples();
-  renderCheatSheet();
-  renderFavorites();
+function startLevel(index) {
+  levelIndex = index;
+  player = { x: 1, y: 5, mode: player.mode || "survival", inventory: player.inventory || {} };
+  state = { blocks: {}, cows: [], keepInventory: false, ...levels[index].setup() };
+  document.getElementById("missionTitle").textContent = levels[index].title;
+  document.getElementById("missionText").textContent = levels[index].text;
+  document.getElementById("objectiveText").textContent = levels[index].objective;
+  document.getElementById("tips").innerHTML = levels[index].tips.map(tip => `<li><code>${tip}</code></li>`).join("");
+  levelNumber.textContent = index + 1;
+  say("Missao iniciada. Digite o comando no console.");
+  render();
+}
 
-  $("search").addEventListener("input", renderCommands);
-  $("categoryFilter").addEventListener("change", renderCommands);
-  $("ecoMode").addEventListener("change", (event) => {
-    document.body.classList.toggle("eco", event.target.checked);
-    localStorage.setItem("mcEco", event.target.checked ? "1" : "0");
+function render() {
+  const tiles = [];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const key = `${x},${y}`;
+      let type = y > 5 ? "dirt" : "grass";
+      let text = "";
+      if (state.weather === "rain" || state.weather === "thunder") type = "water";
+      if (state.time === "night") type = "dark";
+      if (state.blocks?.[key] === "stone") type = "stone";
+      if (state.lit?.some(([lx, ly]) => lx === x && ly === y)) type += " lit";
+      if (state.base?.[0] === x && state.base?.[1] === y) text = "⌂";
+      if (state.zombies?.some(([zx, zy]) => zx === x && zy === y)) text = "Z";
+      if (state.cows?.some(([cx, cy]) => cx === x && cy === y)) text = "C";
+      if (player.x === x && player.y === y) text = "@";
+      tiles.push(`<div class="tile ${type} ${text === "@" ? "player" : ""}">${text}</div>`);
+    }
+  }
+  world.innerHTML = tiles.join("");
+  xpEl.textContent = xp;
+}
+
+function runCommand(raw) {
+  const command = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!command.startsWith("/")) {
+    return say("Comandos comecam com barra, exemplo: /time set day", false);
+  }
+
+  const parts = command.split(" ");
+  const name = parts[0];
+
+  if (name === "/time" && parts[1] === "set") {
+    state.time = parts[2] === "night" ? "night" : "day";
+    say(`Tempo alterado para ${state.time}.`);
+  } else if (name === "/weather") {
+    state.weather = parts[1] || "clear";
+    say(`Clima alterado para ${state.weather}.`);
+  } else if (name === "/give" && parts[1] === "@p") {
+    const item = (parts[2] || "").replace("minecraft:", "");
+    const amount = Number(parts[3] || 1);
+    player.inventory[item] = (player.inventory[item] || 0) + Math.max(1, amount);
+    say(`Voce recebeu ${amount}x ${item}.`);
+  } else if ((name === "/tp" || name === "/teleport") && parts[1] === "@p") {
+    const x = clamp(Number(parts[2]), 0, width - 1);
+    const y = clamp(Number(parts[3]), 0, height - 1);
+    player.x = x;
+    player.y = y;
+    say(`Teleportado para ${x}, ${y}.`);
+  } else if (name === "/gamemode") {
+    player.mode = parts[1] || "survival";
+    say(`Modo de jogo: ${player.mode}.`);
+  } else if (name === "/gamerule" && parts[1] === "keepinventory") {
+    state.keepInventory = parts[2] === "true";
+    say(`keepInventory = ${state.keepInventory}.`);
+  } else if (name === "/setblock") {
+    const x = clamp(Number(parts[1]), 0, width - 1);
+    const y = clamp(Number(parts[2]), 0, height - 1);
+    const block = (parts[3] || "").replace("minecraft:", "");
+    if (block === "torch") state.lit.push([x, y]);
+    else state.blocks[`${x},${y}`] = block || "stone";
+    say(`Bloco ${block || "stone"} colocado em ${x}, ${y}.`);
+  } else if (name === "/summon") {
+    const entity = (parts[1] || "").replace("minecraft:", "");
+    const x = clamp(Number(parts[2] || player.x), 0, width - 1);
+    const y = clamp(Number(parts[3] || player.y), 0, height - 1);
+    if (entity === "cow") state.cows.push([x, y]);
+    if (entity === "zombie") state.zombies.push([x, y]);
+    say(`${entity} invocado em ${x}, ${y}.`);
+  } else if (name === "/kill" && command.includes("zombie")) {
+    state.zombies = [];
+    say("Zumbis removidos.");
+  } else if (name === "/effect") {
+    say("Efeito aplicado. No Minecraft real, use: /effect give @p minecraft:speed 60 1");
+  } else {
+    say("Comando ainda nao resolve esta missao. Veja o Livro de comandos.", false);
+  }
+
+  render();
+  if (levels[levelIndex].check()) completeLevel();
+}
+
+function completeLevel() {
+  xp += 10;
+  render();
+  if (levelIndex + 1 >= levels.length) {
+    say("Voce zerou o Command Quest. Agora voce ja sabe os comandos essenciais do Minecraft Java.");
+    return;
+  }
+  say("Missao completa. Proxima fase carregando...");
+  setTimeout(() => startLevel(levelIndex + 1), 900);
+}
+
+function say(message, ok = true) {
+  toast.textContent = message;
+  toast.style.borderColor = ok ? "rgba(126,231,135,.55)" : "rgba(255,107,107,.65)";
+}
+
+function clamp(value, min, max) {
+  if (Number.isNaN(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+function renderBook() {
+  commandBook.innerHTML = commandHelp.map(([title, syntax, desc]) => `
+    <div class="book-entry">
+      <b>${title}</b>
+      <span>${desc}</span>
+      <code>${syntax}</code>
+    </div>
+  `).join("");
+}
+
+function bindControls() {
+  document.getElementById("runCommand").addEventListener("click", () => {
+    runCommand(input.value);
+    input.value = "";
+    input.focus();
   });
-  $("ecoMode").checked = localStorage.getItem("mcEco") === "1";
-  document.body.classList.toggle("eco", $("ecoMode").checked);
-
-  document.querySelectorAll(".nav").forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.view));
+  input.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      runCommand(input.value);
+      input.value = "";
+    }
   });
+  lowMode.addEventListener("change", () => document.body.classList.toggle("low", lowMode.checked));
+  document.body.classList.toggle("low", lowMode.checked);
 }
 
-function buildCategories() {
-  const categories = ["Todas", ...new Set(commands.map((command) => command.category).sort())];
-  $("categoryFilter").innerHTML = categories.map((category) => `<option>${category}</option>`).join("");
+let frameCount = 0;
+let lastFps = performance.now();
+function fpsLoop(now) {
+  frameCount++;
+  if (now - lastFps >= 1000) {
+    fpsEl.textContent = frameCount;
+    frameCount = 0;
+    lastFps = now;
+  }
+  requestAnimationFrame(fpsLoop);
 }
 
-function switchView(view) {
-  document.querySelectorAll(".nav").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
-  document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active-view", section.id === view));
-}
-
-function renderCommands() {
-  const query = $("search").value.trim().toLowerCase();
-  const category = $("categoryFilter").value;
-  const filtered = commands.filter((command) => {
-    const matchesCategory = category === "Todas" || command.category === category;
-    const text = `${command.name} ${command.category} ${command.syntax} ${command.description}`.toLowerCase();
-    return matchesCategory && text.includes(query);
-  });
-  $("commandList").innerHTML = filtered.map(cardTemplate).join("") || `<div class="panel">Nada encontrado.</div>`;
-  bindFavoriteButtons();
-}
-
-function cardTemplate(command) {
-  const active = favorites.includes(command.name);
-  return `
-    <article class="card">
-      <button class="fav" data-command="${command.name}" title="Favoritar">${active ? "★" : "☆"}</button>
-      <h3>/${command.name}</h3>
-      <p>${command.description}</p>
-      <code class="syntax">${escapeHtml(command.syntax)}</code>
-      <span class="tag">${command.category}</span>
-      <span class="tag">${command.tag}</span>
-    </article>
-  `;
-}
-
-function bindFavoriteButtons() {
-  document.querySelectorAll(".fav").forEach((button) => {
-    button.addEventListener("click", () => {
-      const name = button.dataset.command;
-      favorites = favorites.includes(name) ? favorites.filter((item) => item !== name) : [...favorites, name];
-      localStorage.setItem("mcFavorites", JSON.stringify(favorites));
-      renderCommands();
-      renderFavorites();
-    });
-  });
-}
-
-function renderFavorites() {
-  const favoriteCommands = commands.filter((command) => favorites.includes(command.name));
-  $("favoriteList").innerHTML = favoriteCommands.map(cardTemplate).join("") || `<p class="muted">Nenhum favorito ainda.</p>`;
-  bindFavoriteButtons();
-}
-
-function renderExamples() {
-  $("safeExamples").innerHTML = examples.map((example) => `<code class="syntax">${escapeHtml(example)}</code>`).join("");
-}
-
-function renderCheatSheet() {
-  const rows = [
-    ["Criativo", "/gamemode creative"],
-    ["Sobrevivencia", "/gamemode survival"],
-    ["Dia", "/time set day"],
-    ["Sem chuva", "/weather clear"],
-    ["Manter inventario", "/gamerule keepInventory true"],
-    ["Dar comida", "/give @p minecraft:cooked_beef 32"],
-    ["TP para base", "/tp @p X Y Z"],
-    ["Achar vila", "/locate structure minecraft:village"],
-    ["Spawn aqui", "/setworldspawn ~ ~ ~"],
-    ["Limpar mobs", "/kill @e[type=!player,distance=..80]"]
-  ];
-  $("cheatSheet").innerHTML = rows.map(([label, command]) => `<p><b>${label}</b><br><code>${escapeHtml(command)}</code></p>`).join("");
-}
-
-function escapeHtml(value) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-init();
+renderBook();
+bindControls();
+startLevel(0);
+requestAnimationFrame(fpsLoop);
