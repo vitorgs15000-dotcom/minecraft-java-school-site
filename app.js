@@ -17,6 +17,11 @@ let targetFrameMs = 1000 / 30;
 let drawnTiles = 0;
 let culledTiles = 0;
 let time = "day";
+let renderChunks = 3;
+let entityLimit = 16;
+let particlesEnabled = false;
+let smoothLighting = false;
+let economicalAi = true;
 
 const player = {
   x: 0,
@@ -45,14 +50,17 @@ const palette = {
 const hardware = detectHardware();
 applyAutoProfile();
 renderHardware();
+bindSettings();
 
 document.getElementById("play").addEventListener("click", startGame);
 document.getElementById("toggleMode").addEventListener("click", () => {
   ultraLight = !ultraLight;
-  targetFrameMs = 1000 / (ultraLight ? 30 : 45);
+  applyProfileValues(ultraLight ? "ultra" : "performance");
   document.getElementById("toggleMode").textContent = `Modo ultra leve: ${ultraLight ? "ON" : "OFF"}`;
   document.getElementById("profileLabel").textContent = ultraLight ? "Ultra leve" : "Desempenho";
 });
+document.getElementById("athlonPreset").addEventListener("click", () => applyProfileValues("athlon"));
+document.getElementById("exportConfig").addEventListener("click", exportConfig);
 
 document.addEventListener("keydown", (event) => {
   keys.add(event.key.toLowerCase());
@@ -84,8 +92,50 @@ function getGpuName() {
 
 function applyAutoProfile() {
   ultraLight = hardware.cores <= 2 || hardware.memory <= 4;
-  targetFrameMs = 1000 / (ultraLight ? 30 : 45);
+  applyProfileValues(ultraLight ? "athlon" : "performance");
   document.getElementById("toggleMode").textContent = `Modo ultra leve: ${ultraLight ? "ON" : "OFF"}`;
+}
+
+function applyProfileValues(profile) {
+  if (profile === "athlon") {
+    setSettings({ fps: 30, chunks: 3, entities: 12, particles: false, lighting: false, ai: true });
+  } else if (profile === "ultra") {
+    setSettings({ fps: 30, chunks: 3, entities: 16, particles: false, lighting: false, ai: true });
+  } else {
+    setSettings({ fps: 45, chunks: 5, entities: 36, particles: true, lighting: false, ai: true });
+  }
+}
+
+function setSettings(values) {
+  document.getElementById("fpsLimit").value = values.fps;
+  document.getElementById("renderChunks").value = values.chunks;
+  document.getElementById("entityLimit").value = values.entities;
+  document.getElementById("particles").checked = values.particles;
+  document.getElementById("lighting").checked = values.lighting;
+  document.getElementById("mobAi").checked = values.ai;
+  readSettings();
+}
+
+function bindSettings() {
+  for (const id of ["fpsLimit", "renderChunks", "entityLimit", "particles", "lighting", "mobAi"]) {
+    document.getElementById(id).addEventListener("input", readSettings);
+    document.getElementById(id).addEventListener("change", readSettings);
+  }
+  readSettings();
+}
+
+function readSettings() {
+  const fpsLimit = Number(document.getElementById("fpsLimit").value);
+  renderChunks = Number(document.getElementById("renderChunks").value);
+  entityLimit = Number(document.getElementById("entityLimit").value);
+  particlesEnabled = document.getElementById("particles").checked;
+  smoothLighting = document.getElementById("lighting").checked;
+  economicalAi = document.getElementById("mobAi").checked;
+  targetFrameMs = 1000 / fpsLimit;
+  document.getElementById("fpsLimitValue").textContent = fpsLimit;
+  document.getElementById("renderChunksValue").textContent = renderChunks;
+  document.getElementById("entityLimitValue").textContent = entityLimit;
+  renderHardware();
 }
 
 function renderHardware() {
@@ -93,7 +143,7 @@ function renderHardware() {
     <span>CPU: ${hardware.cores} threads</span>
     <span>RAM estimada: ${hardware.memory}GB</span>
     <span>GPU: ${escapeHtml(hardware.gpu).slice(0, 42)}</span>
-    <span>Chunks: ${ultraLight ? "3" : "5"}</span>
+    <span>Chunks: ${renderChunks}</span>
   `;
 }
 
@@ -148,7 +198,7 @@ function update(dt) {
     player.hunger = Math.max(0, player.hunger - 1);
     if (player.hunger === 0) player.hp = Math.max(0, player.hp - 1);
   }
-  if (player.tick % (ultraLight ? 18 : 10) === 0) updateMobs();
+  if (player.tick % (economicalAi ? 18 : 8) === 0) updateMobs();
   trimChunkCache();
 }
 
@@ -201,7 +251,7 @@ function render() {
   const viewH = Math.ceil(canvas.height / TILE) + 2;
   const startX = player.x - Math.floor(viewW / 2);
   const startY = player.y - Math.floor(viewH / 2);
-  const renderDistance = (ultraLight ? 3 : 5) * CHUNK;
+  const renderDistance = renderChunks * CHUNK;
 
   ctx.fillStyle = time === "night" ? palette.skyNight : palette.air;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -218,6 +268,7 @@ function render() {
         continue;
       }
       drawBlock(block, (x - startX) * TILE, (y - startY) * TILE, y);
+      if (particlesEnabled && block === "torch" && !ultraLight) drawParticle((x - startX) * TILE, (y - startY) * TILE);
       drawnTiles++;
     }
   }
@@ -230,7 +281,7 @@ function render() {
 }
 
 function drawBlock(block, x, y, worldY) {
-  ctx.fillStyle = shade(palette[block] || "#ff00ff", ultraLight ? 0 : Math.max(0, worldY - 30));
+  ctx.fillStyle = shade(palette[block] || "#ff00ff", smoothLighting ? Math.max(0, worldY - 30) : 0);
   ctx.fillRect(x, y, TILE, TILE);
   if (!ultraLight && block !== "air") {
     ctx.strokeStyle = "rgba(0,0,0,.18)";
@@ -258,6 +309,11 @@ function drawMob(mob, startX, startY) {
   ctx.fillRect(sx + 5, sy + 5, TILE - 10, TILE - 10);
   ctx.fillStyle = "#000";
   ctx.fillText(mob.type === "zombie" ? "Z" : "C", sx + 8, sy + 17);
+}
+
+function drawParticle(x, y) {
+  ctx.fillStyle = "rgba(255,220,120,.65)";
+  ctx.fillRect(x + 11, y + 2 + Math.floor((performance.now() / 160) % 4), 2, 2);
 }
 
 function blockAt(x, y) {
@@ -323,8 +379,8 @@ function trimChunkCache() {
 function seedMobs() {
   if (mobs.length) return;
   mobs.push({ type: "cow", x: 8, y: 33 });
-  mobs.push({ type: "zombie", x: 14, y: 33 });
-  mobs.push({ type: "zombie", x: -10, y: 34 });
+  if (entityLimit >= 8) mobs.push({ type: "zombie", x: 14, y: 33 });
+  if (entityLimit >= 12) mobs.push({ type: "zombie", x: -10, y: 34 });
 }
 
 function solid(block) {
@@ -361,6 +417,35 @@ function updateHud() {
   document.getElementById("culled").textContent = culledTiles;
   document.getElementById("hp").textContent = player.hp;
   document.getElementById("hunger").textContent = player.hunger;
+}
+
+function exportConfig() {
+  const config = {
+    game: "AthlonCraft Java 26.1.2 Lite",
+    target: "AMD Athlon X2 / Core 2 Duo / 4GB RAM",
+    officialMinecraftEquivalent: "Minecraft Java latest release: 26.1.2",
+    settings: {
+      fpsLimit: Number(document.getElementById("fpsLimit").value),
+      renderDistanceChunks: renderChunks,
+      entityLimit,
+      particles: particlesEnabled ? "minimal" : "off",
+      smoothLighting,
+      shadows: false,
+      mobAi: economicalAi ? "low-frequency" : "normal",
+      chunkCacheLimit: ultraLight ? 72 : 140
+    },
+    officialLauncherSuggestion: {
+      javaArgs: "-Xms512M -Xmx1536M -XX:+UseG1GC",
+      resolution: "854x480 or 1280x720",
+      graphics: "Fast",
+      simulationDistance: 4,
+      renderDistance: renderChunks,
+      particles: particlesEnabled ? "Minimal" : "Off"
+    }
+  };
+  const output = document.getElementById("configOutput");
+  output.textContent = JSON.stringify(config, null, 2);
+  output.classList.add("active");
 }
 
 function status(text) {
