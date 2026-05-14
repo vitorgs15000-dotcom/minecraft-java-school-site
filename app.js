@@ -1,414 +1,372 @@
-const W = 16;
-const H = 10;
-const $ = (id) => document.getElementById(id);
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d", { alpha: false });
 
-const worldEl = $("world");
-const logEl = $("log");
-const inputEl = $("commandInput");
-const commandBookEl = $("commandBook");
-const searchEl = $("commandSearch");
+const CHUNK = 16;
+const TILE = 24;
+const keys = new Set();
+const chunks = new Map();
+const mobs = [];
 
-let player = { x: 2, y: 6, mode: "survival", health: 20, hunger: 20, xp: 0 };
-let world = [];
-let mobs = [];
-let inventory = { wood: 0, planks: 0, stone: 0, torch: 0, diamond: 0, food: 0 };
-let day = 1;
+let ultraLight = true;
+let running = false;
+let last = 0;
+let fpsTimer = 0;
+let frames = 0;
+let fps = 0;
+let targetFrameMs = 1000 / 30;
+let drawnTiles = 0;
+let culledTiles = 0;
 let time = "day";
-let weather = "clear";
-let activeLesson = "survival";
-let completed = new Set();
 
-const lessons = {
-  survival: {
-    title: "Survival: sobreviva ao primeiro dia",
-    text: "Colete madeira, transforme em tabuas, construa uma mesa, minere pedra e ilumine a base.",
-    goal: "Objetivo: 4 madeiras, 4 tabuas, 4 pedras, 1 mesa e 1 tocha colocada.",
-    tasks: [
-      ["Coletar madeira", () => inventory.wood >= 4],
-      ["Criar tabuas", () => inventory.planks >= 4],
-      ["Colocar mesa de trabalho", () => hasBlock("crafting_table")],
-      ["Minerar pedra", () => inventory.stone >= 4],
-      ["Colocar uma tocha", () => hasBlock("torch")]
-    ]
-  },
-  creative: {
-    title: "Creative: construa sem limite",
-    text: "Entre no modo criativo, voe pelo mapa com teleporte e monte uma mini base.",
-    goal: "Objetivo: usar creative, colocar 6 blocos e invocar uma vaca.",
-    tasks: [
-      ["Entrar no creative", () => player.mode === "creative"],
-      ["Colocar 6 blocos", () => countPlaced() >= 6],
-      ["Invocar uma vaca", () => mobs.some(m => m.type === "cow")]
-    ]
-  },
-  commands: {
-    title: "Comandos: controle o mundo",
-    text: "Pratique os principais comandos de Minecraft Java atual.",
-    goal: "Objetivo: usar /time, /weather, /give, /tp e /gamerule.",
-    tasks: [
-      ["Usar /time", () => completed.has("time")],
-      ["Usar /weather", () => completed.has("weather")],
-      ["Usar /give", () => completed.has("give")],
-      ["Usar /tp", () => completed.has("tp")],
-      ["Usar /gamerule", () => completed.has("gamerule")]
-    ]
-  }
+const player = {
+  x: 0,
+  y: 30,
+  hp: 20,
+  hunger: 20,
+  tick: 0
 };
 
-const commands = [
-  ["advancement", "/advancement grant @p everything", "Avancos/conquistas."],
-  ["attribute", "/attribute @p minecraft:generic.max_health base set 40", "Atributos de entidades."],
-  ["ban", "/ban Steve grief", "Bane jogador no servidor."],
-  ["ban-ip", "/ban-ip 127.0.0.1", "Bane IP."],
-  ["banlist", "/banlist players", "Lista banimentos."],
-  ["bossbar", "/bossbar add minecraft:vida \"Vida\"", "Barra de boss customizada."],
-  ["clear", "/clear @p minecraft:dirt", "Limpa itens."],
-  ["clone", "/clone 0 60 0 5 65 5 10 60 10", "Copia area."],
-  ["damage", "/damage @p 2", "Causa dano."],
-  ["data", "/data get entity @p", "NBT/dados avancados."],
-  ["datapack", "/datapack list", "Gerencia datapacks."],
-  ["debug", "/debug start", "Diagnostico."],
-  ["defaultgamemode", "/defaultgamemode survival", "Modo padrao."],
-  ["deop", "/deop Steve", "Remove operador."],
-  ["difficulty", "/difficulty easy", "Dificuldade."],
-  ["effect", "/effect give @p minecraft:speed 60 1", "Efeitos."],
-  ["enchant", "/enchant @p minecraft:sharpness 5", "Encanta item."],
-  ["execute", "/execute as @e[type=zombie] run say oi", "Comando avancado."],
-  ["experience", "/xp add @p 10 levels", "XP."],
-  ["fill", "/fill 0 60 0 5 65 5 minecraft:stone", "Preenche area."],
-  ["fillbiome", "/fillbiome 0 60 0 5 65 5 minecraft:plains", "Troca bioma."],
-  ["forceload", "/forceload add 0 0", "Mantem chunk carregado."],
-  ["function", "/function pack:start", "Executa funcao."],
-  ["gamemode", "/gamemode creative", "Troca survival/creative."],
-  ["gamerule", "/gamerule keepInventory true", "Regras do mundo."],
-  ["give", "/give @p minecraft:diamond 3", "Da item."],
-  ["help", "/help give", "Ajuda."],
-  ["item", "/item replace entity @p weapon.mainhand with minecraft:diamond_sword", "Edita slots."],
-  ["jfr", "/jfr start", "Profiling servidor."],
-  ["kick", "/kick Steve", "Expulsa jogador."],
-  ["kill", "/kill @e[type=minecraft:zombie]", "Remove entidades."],
-  ["list", "/list", "Jogadores online."],
-  ["locate", "/locate structure minecraft:village", "Localiza estruturas."],
-  ["loot", "/loot give @p loot minecraft:chests/simple_dungeon", "Gera loot."],
-  ["me", "/me achou diamante", "Acao no chat."],
-  ["msg", "/msg Steve ola", "Mensagem privada."],
-  ["op", "/op Steve", "Da operador."],
-  ["particle", "/particle minecraft:flame ~ ~1 ~", "Particulas."],
-  ["perf", "/perf start", "Performance servidor."],
-  ["place", "/place feature minecraft:oak", "Coloca feature."],
-  ["playsound", "/playsound minecraft:block.note_block.pling master @p", "Toca som."],
-  ["publish", "/publish", "Abre LAN."],
-  ["random", "/random roll 1..100", "Numero aleatorio."],
-  ["recipe", "/recipe give @p *", "Receitas."],
-  ["reload", "/reload", "Recarrega datapacks."],
-  ["return", "/return 1", "Retorna valor."],
-  ["ride", "/ride @p mount @e[type=horse,limit=1]", "Montaria."],
-  ["save-all", "/save-all", "Salva servidor."],
-  ["say", "/say ola mundo", "Mensagem servidor."],
-  ["schedule", "/schedule function pack:tick 10s", "Agenda funcao."],
-  ["scoreboard", "/scoreboard objectives add pontos dummy", "Placar/variaveis."],
-  ["seed", "/seed", "Mostra seed."],
-  ["setblock", "/setblock 5 6 minecraft:torch", "Coloca bloco."],
-  ["setworldspawn", "/setworldspawn ~ ~ ~", "Spawn global."],
-  ["spawnpoint", "/spawnpoint @p ~ ~ ~", "Spawn jogador."],
-  ["spectate", "/spectate @e[type=cow,limit=1]", "Espectar entidade."],
-  ["spreadplayers", "/spreadplayers 0 0 20 80 false @a", "Espalha jogadores."],
-  ["stop", "/stop", "Desliga servidor."],
-  ["stopsound", "/stopsound @a", "Para sons."],
-  ["summon", "/summon minecraft:cow 8 6", "Invoca entidade."],
-  ["tag", "/tag @p add builder", "Tags."],
-  ["team", "/team add azul", "Times."],
-  ["teammsg", "/teammsg vamos", "Chat do time."],
-  ["teleport", "/tp @p 8 6", "Teleporte."],
-  ["tellraw", "/tellraw @a {\"text\":\"Ola\"}", "Mensagem JSON."],
-  ["tick", "/tick rate 20", "Velocidade de ticks."],
-  ["time", "/time set day", "Horario."],
-  ["title", "/title @a title {\"text\":\"Bem-vindo\"}", "Titulo na tela."],
-  ["transfer", "/transfer servidor.com", "Move servidor."],
-  ["trigger", "/trigger home", "Aciona scoreboard."],
-  ["weather", "/weather clear", "Clima."],
-  ["whitelist", "/whitelist add Steve", "Lista permitida."],
-  ["worldborder", "/worldborder set 1000", "Borda do mundo."]
-];
+const palette = {
+  air: "#5d95d2",
+  skyNight: "#121722",
+  grass: "#4f8f43",
+  dirt: "#73523a",
+  stone: "#747b82",
+  log: "#5b3d25",
+  leaves: "#3f8840",
+  water: "#246ba8",
+  sand: "#cfb77a",
+  coal: "#2d3033",
+  iron: "#b09b84",
+  torch: "#f2c35f",
+  planks: "#a67942"
+};
 
-function initWorld() {
-  world = [];
-  for (let y = 0; y < H; y++) {
-    const row = [];
-    for (let x = 0; x < W; x++) {
-      let block = y < 4 ? "sky" : y === 4 ? "grass" : y < 8 ? "dirt" : "stone";
-      if ((x === 3 || x === 12) && y === 3) block = "tree";
-      if ((x === 3 || x === 12) && y === 4) block = "tree";
-      if (x > 6 && x < 10 && y === 5) block = "water";
-      if (x === 14 && y === 8) block = "diamond";
-      row.push({ block, placed: false });
-    }
-    world.push(row);
+const hardware = detectHardware();
+applyAutoProfile();
+renderHardware();
+
+document.getElementById("play").addEventListener("click", startGame);
+document.getElementById("toggleMode").addEventListener("click", () => {
+  ultraLight = !ultraLight;
+  targetFrameMs = 1000 / (ultraLight ? 30 : 45);
+  document.getElementById("toggleMode").textContent = `Modo ultra leve: ${ultraLight ? "ON" : "OFF"}`;
+  document.getElementById("profileLabel").textContent = ultraLight ? "Ultra leve" : "Desempenho";
+});
+
+document.addEventListener("keydown", (event) => {
+  keys.add(event.key.toLowerCase());
+  if (event.key.toLowerCase() === "m") showMenu();
+  if (event.key === " ") mine();
+  if (event.key === "1") place("stone");
+  if (event.key === "2") place("planks");
+  if (event.key === "3") place("torch");
+});
+document.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
+canvas.addEventListener("mousedown", mine);
+
+function detectHardware() {
+  const cores = navigator.hardwareConcurrency || 2;
+  const memory = navigator.deviceMemory || 4;
+  const gpu = getGpuName();
+  return { cores, memory, gpu };
+}
+
+function getGpuName() {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    const debug = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    return debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : "GPU generica";
+  } catch {
+    return "GPU generica";
   }
-  mobs = [{ type: "zombie", x: 13, y: 6 }];
 }
 
-function render() {
-  $("modeLabel").textContent = player.mode;
-  $("healthLabel").textContent = player.health;
-  $("hungerLabel").textContent = player.hunger;
-  $("xpLabel").textContent = player.xp;
-  $("dayLabel").textContent = day;
+function applyAutoProfile() {
+  ultraLight = hardware.cores <= 2 || hardware.memory <= 4;
+  targetFrameMs = 1000 / (ultraLight ? 30 : 45);
+  document.getElementById("toggleMode").textContent = `Modo ultra leve: ${ultraLight ? "ON" : "OFF"}`;
+}
 
-  const night = time === "night";
-  let html = "";
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      let block = world[y][x].block;
-      let cls = block === "sky" && night ? "night" : block;
-      let text = symbol(block);
-      const mob = mobs.find(m => m.x === x && m.y === y);
-      if (mob) text = mob.type === "zombie" ? "Z" : "C";
-      if (player.x === x && player.y === y) text = "@";
-      html += `<div class="tile ${cls} ${mob ? "mob" : ""} ${player.x === x && player.y === y ? "player" : ""}">${text}</div>`;
-    }
+function renderHardware() {
+  document.getElementById("hardware").innerHTML = `
+    <span>CPU: ${hardware.cores} threads</span>
+    <span>RAM estimada: ${hardware.memory}GB</span>
+    <span>GPU: ${escapeHtml(hardware.gpu).slice(0, 42)}</span>
+    <span>Chunks: ${ultraLight ? "3" : "5"}</span>
+  `;
+}
+
+function startGame() {
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  resizeCanvas();
+  seedMobs();
+  running = true;
+  requestAnimationFrame(loop);
+}
+
+function showMenu() {
+  running = false;
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+}
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(640, Math.floor(rect.width));
+  canvas.height = Math.max(360, Math.floor(rect.height));
+}
+
+window.addEventListener("resize", resizeCanvas);
+
+function loop(now) {
+  if (!running) return;
+  if (now - last < targetFrameMs) {
+    requestAnimationFrame(loop);
+    return;
   }
-  worldEl.innerHTML = html;
-  renderInventory();
-  renderLesson();
+  const dt = Math.min(2, (now - last) / 16.67 || 1);
+  last = now;
+  update(dt);
+  render();
+  updateFps(now);
+  requestAnimationFrame(loop);
 }
 
-function symbol(block) {
-  return {
-    tree: "♣", water: "~", diamond: "♦", torch: "✦",
-    crafting_table: "▣", bed: "▤", planks: "▥", stone: "■"
-  }[block] || "";
-}
+function update(dt) {
+  let dx = 0;
+  let dy = 0;
+  if (keys.has("a")) dx--;
+  if (keys.has("d")) dx++;
+  if (keys.has("w")) dy--;
+  if (keys.has("s")) dy++;
+  if (dx || dy) move(dx, dy);
 
-function renderInventory() {
-  $("inventory").innerHTML = Object.entries(inventory)
-    .map(([item, amount]) => `<div class="slot"><b>${item}</b>${amount}</div>`)
-    .join("");
-}
-
-function renderLesson() {
-  const lesson = lessons[activeLesson];
-  $("lessonTitle").textContent = lesson.title;
-  $("lessonText").textContent = lesson.text;
-  $("goalText").textContent = lesson.goal;
-  $("taskList").innerHTML = lesson.tasks.map(([text, done]) =>
-    `<li class="${done() ? "done" : ""}">${text}</li>`
-  ).join("");
-  if (lesson.tasks.every(([, done]) => done())) {
-    log(`Modulo ${activeLesson} concluido. Muito bom.`);
+  player.tick++;
+  if (player.tick % 60 === 0) {
+    player.hunger = Math.max(0, player.hunger - 1);
+    if (player.hunger === 0) player.hp = Math.max(0, player.hp - 1);
   }
+  if (player.tick % (ultraLight ? 18 : 10) === 0) updateMobs();
+  trimChunkCache();
 }
 
 function move(dx, dy) {
-  const nx = clamp(player.x + dx, 0, W - 1);
-  const ny = clamp(player.y + dy, 0, H - 1);
-  const target = world[ny][nx].block;
-  if (player.mode !== "creative" && !["sky", "grass", "torch", "water"].includes(target)) {
-    return log("Bloco solido no caminho. Quebre ou use creative.");
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+  if (!solid(blockAt(nx, ny))) {
+    player.x = nx;
+    player.y = ny;
   }
-  player.x = nx;
-  player.y = ny;
-  tickSurvival();
-  render();
 }
 
 function mine() {
-  const y = clamp(player.y + 1, 0, H - 1);
-  const x = player.x;
-  const block = world[y][x].block;
-  if (block === "sky" || block === "water") return log("Nada util para quebrar aqui.");
-  if (block === "tree") addItem("wood", 1);
-  if (block === "stone") addItem("stone", 1);
-  if (block === "diamond") addItem("diamond", 1);
-  if (block === "dirt" || block === "grass") addItem("dirt", 1);
-  world[y][x] = { block: "sky", placed: false };
-  player.xp += 1;
-  tickSurvival();
-  log(`Voce quebrou ${block}.`);
-  render();
-}
-
-function build(block) {
-  const x = player.x;
-  const y = clamp(player.y - 1, 0, H - 1);
-  if (player.mode !== "creative") {
-    if (block === "planks" && inventory.planks <= 0) return log("Voce precisa de tabuas.");
-    if (block === "stone" && inventory.stone <= 0) return log("Voce precisa de pedra.");
-    if (block === "torch" && inventory.torch <= 0) return log("Voce precisa de tocha.");
-    if (block === "crafting_table" && inventory.planks < 4) return log("Mesa custa 4 tabuas.");
+  const tx = player.x;
+  const ty = player.y + 1;
+  const block = blockAt(tx, ty);
+  if (block !== "air" && block !== "water") {
+    setBlock(tx, ty, "air");
+    status(`Minerou ${block}.`);
   }
-  if (block === "planks") inventory.planks = Math.max(0, inventory.planks - 1);
-  if (block === "stone") inventory.stone = Math.max(0, inventory.stone - 1);
-  if (block === "torch") inventory.torch = Math.max(0, inventory.torch - 1);
-  if (block === "crafting_table") inventory.planks = Math.max(0, inventory.planks - 4);
-  world[y][x] = { block, placed: true };
-  log(`Voce colocou ${block}.`);
-  render();
 }
 
-function craft(item) {
-  if (item === "planks" && inventory.wood > 0) {
-    inventory.wood -= 1;
-    inventory.planks += 4;
-    return log("Craft: 1 madeira virou 4 tabuas.");
+function place(block) {
+  setBlock(player.x, player.y - 1, block);
+  status(`Colocou ${block}.`);
+}
+
+function updateMobs() {
+  for (const mob of mobs) {
+    const dist = Math.abs(mob.x - player.x) + Math.abs(mob.y - player.y);
+    if (dist > 12) continue;
+    const dx = Math.sign(player.x - mob.x);
+    const dy = Math.abs(player.x - mob.x) > Math.abs(player.y - mob.y) ? 0 : Math.sign(player.y - mob.y);
+    if (!solid(blockAt(mob.x + dx, mob.y + dy))) {
+      mob.x += dx;
+      mob.y += dy;
+    }
+    if (Math.abs(mob.x - player.x) <= 1 && Math.abs(mob.y - player.y) <= 1) {
+      player.hp = Math.max(0, player.hp - 1);
+      status("Zumbi atacou. Fuja, minere caminho ou coloque blocos.");
+    }
   }
-  if (item === "torch" && inventory.wood > 0 && inventory.stone > 0) {
-    inventory.wood -= 1;
-    inventory.stone -= 1;
-    inventory.torch += 4;
-    return log("Craft: tochas criadas.");
+}
+
+function render() {
+  drawnTiles = 0;
+  culledTiles = 0;
+
+  const viewW = Math.ceil(canvas.width / TILE) + 2;
+  const viewH = Math.ceil(canvas.height / TILE) + 2;
+  const startX = player.x - Math.floor(viewW / 2);
+  const startY = player.y - Math.floor(viewH / 2);
+  const renderDistance = (ultraLight ? 3 : 5) * CHUNK;
+
+  ctx.fillStyle = time === "night" ? palette.skyNight : palette.air;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = startY; y < startY + viewH; y++) {
+    for (let x = startX; x < startX + viewW; x++) {
+      if (Math.abs(x - player.x) > renderDistance || Math.abs(y - player.y) > renderDistance) {
+        culledTiles++;
+        continue;
+      }
+      const block = blockAt(x, y);
+      if (block === "air" && y > player.y + 10) {
+        culledTiles++;
+        continue;
+      }
+      drawBlock(block, (x - startX) * TILE, (y - startY) * TILE, y);
+      drawnTiles++;
+    }
   }
-  log("Receita indisponivel. Use madeira/pedra.");
-}
 
-function runCommand(raw) {
-  const command = raw.trim();
-  const lower = command.toLowerCase().replace(/\s+/g, " ");
-  if (!lower.startsWith("/")) return log("Digite comandos com /, exemplo: /gamemode creative");
-  const p = lower.split(" ");
-  const cmd = p[0];
-
-  if (cmd === "/gamemode") {
-    player.mode = p[1] || "survival";
-    completed.add("gamemode");
-    log(`Modo alterado para ${player.mode}.`);
-  } else if (cmd === "/give") {
-    const item = (p[2] || "minecraft:stone").replace("minecraft:", "");
-    const amount = Math.max(1, Number(p[3] || 1));
-    addItem(item, amount);
-    completed.add("give");
-    log(`Recebido ${amount}x ${item}.`);
-  } else if (cmd === "/tp" || cmd === "/teleport") {
-    player.x = clamp(Number(p[2]), 0, W - 1);
-    player.y = clamp(Number(p[3]), 0, H - 1);
-    completed.add("tp");
-    log(`Teleportado para ${player.x}, ${player.y}.`);
-  } else if (cmd === "/time") {
-    time = p[2] === "night" ? "night" : "day";
-    completed.add("time");
-    log(`Tempo: ${time}.`);
-  } else if (cmd === "/weather") {
-    weather = p[1] || "clear";
-    completed.add("weather");
-    log(`Clima: ${weather}.`);
-  } else if (cmd === "/gamerule") {
-    completed.add("gamerule");
-    log(`${p[1]} = ${p[2]}.`);
-  } else if (cmd === "/setblock") {
-    const x = clamp(Number(p[1]), 0, W - 1);
-    const y = clamp(Number(p[2]), 0, H - 1);
-    const block = (p[3] || "minecraft:stone").replace("minecraft:", "");
-    world[y][x] = { block, placed: true };
-    completed.add("setblock");
-    log(`Bloco ${block} colocado em ${x}, ${y}.`);
-  } else if (cmd === "/summon") {
-    const type = (p[1] || "minecraft:cow").replace("minecraft:", "");
-    mobs.push({ type, x: clamp(Number(p[2] || player.x), 0, W - 1), y: clamp(Number(p[3] || player.y), 0, H - 1) });
-    completed.add("summon");
-    log(`${type} invocado.`);
-  } else if (cmd === "/kill") {
-    if (lower.includes("zombie")) mobs = mobs.filter(m => m.type !== "zombie");
-    else mobs = [];
-    completed.add("kill");
-    log("Entidades removidas.");
-  } else if (cmd === "/difficulty" || cmd === "/effect" || cmd === "/enchant" || cmd === "/locate" || cmd === "/seed" || cmd === "/help") {
-    completed.add(cmd.slice(1));
-    log(`Comando ${cmd} aprendido. Veja como ele funciona no livro.`);
-  } else {
-    const known = commands.find(([name]) => `/${name}` === cmd);
-    log(known ? `Comando ${cmd} existe no Minecraft Java. Este simulador explica no livro.` : "Comando nao encontrado no livro.");
+  for (const mob of mobs) {
+    drawMob(mob, startX, startY);
   }
-  render();
+  drawPlayer(canvas.width / 2, canvas.height / 2);
+  updateHud();
 }
 
-function tickSurvival() {
-  if (player.mode !== "survival") return;
-  player.hunger = Math.max(0, player.hunger - 1);
-  if (mobs.some(m => m.type === "zombie" && Math.abs(m.x - player.x) <= 1 && Math.abs(m.y - player.y) <= 1)) {
-    player.health = Math.max(0, player.health - 2);
-    log("Zumbi perto. Use /kill, fuja ou mude para creative.");
+function drawBlock(block, x, y, worldY) {
+  ctx.fillStyle = shade(palette[block] || "#ff00ff", ultraLight ? 0 : Math.max(0, worldY - 30));
+  ctx.fillRect(x, y, TILE, TILE);
+  if (!ultraLight && block !== "air") {
+    ctx.strokeStyle = "rgba(0,0,0,.18)";
+    ctx.strokeRect(x, y, TILE, TILE);
   }
-  if (player.hunger === 0) player.health = Math.max(0, player.health - 1);
-}
-
-function addItem(item, amount) {
-  const key = item.replace("minecraft:", "");
-  inventory[key] = (inventory[key] || 0) + amount;
-}
-
-function hasBlock(block) {
-  return world.flat().some(tile => tile.block === block);
-}
-
-function countPlaced() {
-  return world.flat().filter(tile => tile.placed).length;
-}
-
-function renderBook() {
-  const q = searchEl.value.toLowerCase();
-  commandBookEl.innerHTML = commands
-    .filter(([name, syntax, desc]) => `${name} ${syntax} ${desc}`.toLowerCase().includes(q))
-    .map(([name, syntax, desc]) => `<div class="book-entry"><b>/${name}</b><span>${desc}</span><code>${escapeHtml(syntax)}</code></div>`)
-    .join("");
-}
-
-function log(text) {
-  logEl.textContent = text;
-}
-
-function clamp(v, min, max) {
-  return Number.isNaN(v) ? min : Math.max(min, Math.min(max, v));
-}
-
-function escapeHtml(v) {
-  return v.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-document.querySelectorAll("[data-tab]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll("[data-tab]").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    activeLesson = btn.dataset.tab;
-    render();
-  });
-});
-
-document.querySelectorAll("[data-move]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const d = btn.dataset.move;
-    move(d === "left" ? -1 : d === "right" ? 1 : 0, d === "up" ? -1 : d === "down" ? 1 : 0);
-  });
-});
-
-document.querySelector("[data-action='mine']").addEventListener("click", mine);
-document.querySelectorAll("[data-build]").forEach(btn => btn.addEventListener("click", () => build(btn.dataset.build)));
-$("runCommand").addEventListener("click", () => { runCommand(inputEl.value); inputEl.value = ""; inputEl.focus(); });
-inputEl.addEventListener("keydown", e => { if (e.key === "Enter") { runCommand(inputEl.value); inputEl.value = ""; } });
-searchEl.addEventListener("input", renderBook);
-$("lowMode").addEventListener("change", e => document.body.classList.toggle("low", e.target.checked));
-
-document.addEventListener("keydown", e => {
-  if (document.activeElement === inputEl || document.activeElement === searchEl) return;
-  if (e.key.toLowerCase() === "w") move(0, -1);
-  if (e.key.toLowerCase() === "s") move(0, 1);
-  if (e.key.toLowerCase() === "a") move(-1, 0);
-  if (e.key.toLowerCase() === "d") move(1, 0);
-  if (e.code === "Space") mine();
-  if (e.key === "1") build("planks");
-  if (e.key === "2") build("stone");
-  if (e.key === "3") build("torch");
-  if (e.key === "4") build("crafting_table");
-});
-
-setInterval(() => {
-  if (player.mode === "survival") {
-    day += time === "day" ? 0 : 1;
-    if (player.hunger < 8) log("Fome baixa. No Minecraft real, coma para regenerar.");
+  if (block === "torch") {
+    ctx.fillStyle = "#ffe082";
+    ctx.fillRect(x + 10, y + 5, 4, 14);
   }
-}, 18000);
+}
 
-document.body.classList.add("low");
-initWorld();
-renderBook();
-render();
-log("Missao survival iniciada. Quebre arvores, crie tabuas e construa sua primeira base.");
+function drawPlayer(x, y) {
+  ctx.fillStyle = "#315bdc";
+  ctx.fillRect(x - 7, y - 14, 14, 26);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x - 4, y - 10, 3, 3);
+  ctx.fillRect(x + 2, y - 10, 3, 3);
+}
+
+function drawMob(mob, startX, startY) {
+  const sx = (mob.x - startX) * TILE;
+  const sy = (mob.y - startY) * TILE;
+  if (sx < -TILE || sy < -TILE || sx > canvas.width || sy > canvas.height) return;
+  ctx.fillStyle = mob.type === "zombie" ? "#55a868" : "#a5754f";
+  ctx.fillRect(sx + 5, sy + 5, TILE - 10, TILE - 10);
+  ctx.fillStyle = "#000";
+  ctx.fillText(mob.type === "zombie" ? "Z" : "C", sx + 8, sy + 17);
+}
+
+function blockAt(x, y) {
+  const chunk = getChunk(Math.floor(x / CHUNK), Math.floor(y / CHUNK));
+  return chunk.blocks[index(Math.floorMod(x, CHUNK), Math.floorMod(y, CHUNK))];
+}
+
+function setBlock(x, y, block) {
+  const chunk = getChunk(Math.floor(x / CHUNK), Math.floor(y / CHUNK));
+  chunk.blocks[index(Math.floorMod(x, CHUNK), Math.floorMod(y, CHUNK))] = block;
+}
+
+function getChunk(cx, cy) {
+  const key = `${cx},${cy}`;
+  let chunk = chunks.get(key);
+  if (!chunk) {
+    chunk = generateChunk(cx, cy);
+    chunks.set(key, chunk);
+  }
+  chunk.last = performance.now();
+  return chunk;
+}
+
+function generateChunk(cx, cy) {
+  const blocks = new Array(CHUNK * CHUNK);
+  for (let y = 0; y < CHUNK; y++) {
+    for (let x = 0; x < CHUNK; x++) {
+      const wx = cx * CHUNK + x;
+      const wy = cy * CHUNK + y;
+      blocks[index(x, y)] = generateBlock(wx, wy);
+    }
+  }
+  return { blocks, last: performance.now() };
+}
+
+function generateBlock(x, y) {
+  const surface = 34 + fastNoise(x) % 5;
+  if (y < surface - 5) return "air";
+  if (y === surface - 5 && Math.floorMod(x, 21) === 0) return "leaves";
+  if (y >= surface - 4 && y <= surface - 2 && Math.floorMod(x, 21) === 0) return "log";
+  if (y === surface && Math.floorMod(x, 29) < 4) return "sand";
+  if (y === surface) return "grass";
+  if (y < surface + 4) return "dirt";
+  if (Math.floorMod(x * 5 + y * 11, 53) === 0) return "coal";
+  if (Math.floorMod(x * 13 + y * 7, 97) === 0) return "iron";
+  if (Math.floorMod(x * 17 + y * 19, 211) === 0) return "water";
+  return "stone";
+}
+
+function fastNoise(x) {
+  let n = x * 374761393;
+  n = (n ^ (n >> 13)) * 1274126177;
+  return Math.abs(n ^ (n >> 16));
+}
+
+function trimChunkCache() {
+  const limit = ultraLight ? 72 : 140;
+  if (chunks.size <= limit) return;
+  const sorted = [...chunks.entries()].sort((a, b) => a[1].last - b[1].last);
+  for (let i = 0; i < sorted.length - limit; i++) chunks.delete(sorted[i][0]);
+}
+
+function seedMobs() {
+  if (mobs.length) return;
+  mobs.push({ type: "cow", x: 8, y: 33 });
+  mobs.push({ type: "zombie", x: 14, y: 33 });
+  mobs.push({ type: "zombie", x: -10, y: 34 });
+}
+
+function solid(block) {
+  return !["air", "water", "torch"].includes(block);
+}
+
+function shade(hex, amount) {
+  if (amount <= 0) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.max(0, ((n >> 16) & 255) - amount);
+  const g = Math.max(0, ((n >> 8) & 255) - amount);
+  const b = Math.max(0, (n & 255) - amount);
+  return `rgb(${r},${g},${b})`;
+}
+
+function index(x, y) {
+  return y * CHUNK + x;
+}
+
+Math.floorMod = Math.floorMod || ((a, b) => ((a % b) + b) % b);
+
+function updateFps(now) {
+  frames++;
+  if (now - fpsTimer >= 1000) {
+    fps = frames;
+    frames = 0;
+    fpsTimer = now;
+  }
+}
+
+function updateHud() {
+  document.getElementById("fps").textContent = fps;
+  document.getElementById("chunks").textContent = chunks.size;
+  document.getElementById("culled").textContent = culledTiles;
+  document.getElementById("hp").textContent = player.hp;
+  document.getElementById("hunger").textContent = player.hunger;
+}
+
+function status(text) {
+  document.getElementById("status").textContent = text;
+}
+
+function escapeHtml(value) {
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
